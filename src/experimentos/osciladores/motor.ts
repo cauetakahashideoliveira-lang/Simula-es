@@ -12,7 +12,7 @@
  *  - mudar uma condição inicial (campo ou arrasto de uma massa): volta a t = 0.
  *  - voltar o cursor e tocar: o futuro é descartado e recalculado dali.
  */
-import { signal, effect, type Signal } from '@preact/signals';
+import { signal, effect, batch, type Signal } from '@preact/signals';
 import { RelogioFixo, Simulacao } from '../../nucleo/dinamica';
 import type { Sessao } from '../../nucleo/sessao';
 import { configDeValores, criarSimulacao, type ConfigOsc, type SolucaoOsc } from './definicao';
@@ -36,6 +36,8 @@ export class Motor {
   private chaveCI = '';
   private chaveSis = '';
   private tLink = 0;
+  /** verdadeiro enquanto o laço de animação atualiza os sinais (a cena desenha no mesmo quadro) */
+  noQuadro = false;
   /** estatística de desempenho do último quadro */
   ultimo = { passos: 0, msIntegracao: 0 };
 
@@ -132,8 +134,12 @@ export class Motor {
         const t0 = performance.now();
         const feitos = this.sim.avancar(n);
         this.ultimo = { passos: feitos, msIntegracao: performance.now() - t0 };
-        this.cursor.value = this.sim.passos;
-        this.versao.value++;
+        this.noQuadro = true;
+        batch(() => {
+          this.cursor.value = this.sim.passos;
+          this.versao.value++;
+        });
+        this.noQuadro = false;
         if (this.sim.divergiu) {
           this.aviso.value = 'A integração divergiu: o passo de tempo está acima do limite de estabilidade.';
           this.pausar();

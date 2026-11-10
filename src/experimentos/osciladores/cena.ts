@@ -52,7 +52,10 @@ export class CenaOsc {
       void motor.versao.value;
       void motor.rodando.value;
       void motor.sessao.valores.value;
-      this.pedir();
+      // dentro do quadro do motor a cena é desenhada na hora: cena, gráficos e
+      // leituras mostram o mesmo passo no mesmo quadro
+      if (motor.noQuadro) this.desenharAgora();
+      else this.pedir();
     }));
     const on = <K extends keyof HTMLElementEventMap>(t: K, f: (e: HTMLElementEventMap[K]) => void) => {
       el.addEventListener(t, f as EventListener);
@@ -93,14 +96,18 @@ export class CenaOsc {
     if (this.pendente) return;
     this.pendente = requestAnimationFrame(() => {
       this.pendente = 0;
-      const t0 = performance.now();
-      const ctx = this.c.getContext('2d')!;
-      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      ctx.clearRect(0, 0, this.w, this.h);
-      this.pintar(ctx, this.w, this.h, false);
-      this.ultimoQuadroMs = performance.now() - t0;
+      this.desenharAgora();
       if (performance.now() - this.pulso0 < 2400) this.pedir();
     });
+  }
+
+  private desenharAgora() {
+    const t0 = performance.now();
+    const ctx = this.c.getContext('2d')!;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.w, this.h);
+    this.pintar(ctx, this.w, this.h, false);
+    this.ultimoQuadroMs = performance.now() - t0;
   }
 
   private layout(w: number, h: number) {
@@ -271,8 +278,9 @@ export class CenaOsc {
     {
       const en = energia(p, e.x1, e.x2, e.v1, e.v2);
       const E0 = s.energiaEm(0) || en.total || 1;
-      const larg = Math.min(360, w - 40);
-      const x0 = (w - larg) / 2;
+      // à direita: o canto esquerdo fica livre para o convite da predefinição
+      const larg = Math.min(330, w * 0.42);
+      const x0 = w - larg - 22;
       const y0 = 30;
       const total = Math.max(en.total, 1e-300);
       const partes = [
@@ -302,7 +310,7 @@ export class CenaOsc {
       ctx.textAlign = 'right';
       ctx.fillText('massa 2', x0 + larg + 2, y0 - 8);
       ctx.textAlign = 'center';
-      if (larg > 300) ctx.fillText('acoplamento', x0 + larg / 2 + 28, y0 - 8);
+      if (larg > 300) ctx.fillText('acoplamento', x0 + larg / 2 + 34, y0 - 8);
     }
 
     // ——— paredes
@@ -431,14 +439,14 @@ export class CenaOsc {
       ctx.textBaseline = 'top';
       ctx.lineWidth = 1;
       ctx.beginPath();
+      const nMarcas = Math.floor(25 / passoCm + 1e-9);
       for (const eq of [-D_EQ, D_EQ]) {
-        for (let cmv = -25; cmv <= 25 + 1e-9; cmv += passoCm) {
+        for (let q = -nMarcas; q <= nMarcas; q++) {
+          const cmv = q * passoCm;
           const x = Math.round(X(eq + cmv / 100)) + 0.5;
           ctx.moveTo(x, yR);
-          ctx.lineTo(x, yR + (Math.abs(cmv) < 1e-9 ? 7 : 4));
-          if (Math.abs(cmv) < 1e-9 || Math.abs(Math.abs(cmv) - 20) < 1e-9 || (passoCm >= 10 && Math.abs(Math.abs(cmv) - 10) < 1e-9)) {
-            ctx.fillText(Math.abs(cmv) < 1e-9 ? '0' : `${cmv > 0 ? '+' : '−'}${Math.abs(cmv)}`, x, yR + 9);
-          }
+          ctx.lineTo(x, yR + (q === 0 ? 7 : 4));
+          if (q === 0 || q % 2 === 0 || passoCm >= 10) ctx.fillText(q === 0 ? '0' : `${cmv > 0 ? '+' : '−'}${Math.abs(cmv)}`, x, yR + 9);
         }
       }
       ctx.stroke();
@@ -456,8 +464,8 @@ export class CenaOsc {
       // marcas de tempo
       ctx.font = `11.5px ${fontes.ui}`;
       ctx.fillStyle = cores.texto3;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
       ctx.strokeStyle = cores.linha;
       ctx.lineWidth = 1;
       const tAgora = e.i * dt;
@@ -468,7 +476,7 @@ export class CenaOsc {
         ctx.moveTo(xpe, y);
         ctx.lineTo(xpd, y);
         const tt = tAgora - k * passoT;
-        if (tt >= -1e-9) ctx.fillText(k === 0 ? `t = ${fmtFixo(tAgora, 2)} s` : `${fmtFixo(Math.max(0, tt), passoT < 1 ? 1 : 0)} s`, xpe - 8, y);
+        if (tt >= -1e-9) ctx.fillText(k === 0 ? `t = ${fmtFixo(tAgora, 2)} s` : `${fmtFixo(Math.max(0, tt), 2)} s`, xpe + 8, y - 3);
       }
       ctx.stroke();
       // traços: do instante do cursor para o passado

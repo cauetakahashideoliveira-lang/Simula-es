@@ -178,7 +178,13 @@ function Barra({ s }: { s: Sessao<any> }) {
       <Marca />
       <nav class="abas-exp" role="tablist" aria-label="Experimentos">
         {ordem.map((id) => (
-          <button role="tab" aria-selected={ativo.value === id} onClick={() => { ativo.value = id; convite.value = null; }}>
+          <button role="tab" aria-selected={ativo.value === id} onClick={() => {
+            const novo = !sessoes.has(id);
+            ativo.value = id;
+            // primeira visita ao experimento nesta sessão: mostra por onde começar
+            if (novo) mostrarConvite(sessaoDe(id), definicoes[id].predefinicoes[0]?.id);
+            else convite.value = null;
+          }}>
             {definicoes[id].titulo}
           </button>
         ))}
