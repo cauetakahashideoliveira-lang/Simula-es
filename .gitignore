@@ -5,3 +5,7 @@ playwright-report
 *.local
 .DS_Store
 relatorios/capturas
+
+# graphify: só o relatório é versionado; o resto é regenerado com `npm run grafo`
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md

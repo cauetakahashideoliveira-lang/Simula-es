@@ -31,11 +31,6 @@ jobs:
         run: npm run -s medir -- optica a=120 x.prova=1 && npm run -s medir -- osciladores x.passos=2500
       - name: Build
         run: npx vite build
-      - name: Pacote para o GitHub Pages
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
 
   navegador:
     name: Testes de navegador (Chromium, viewport de tablet)
@@ -57,14 +52,54 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          enablement: true
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+
+      # Rota 1 — Pages com fonte "GitHub Actions" (Settings → Pages → Source).
+      - id: paginas
+        name: Verificar se o Pages aceita deploy por Actions
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+      - if: steps.paginas.outcome == 'success'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
       - id: deploy
+        if: steps.paginas.outcome == 'success'
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+
+      # Rota 2 — ramo gh-pages (funciona com Pages em "Deploy from a branch: gh-pages").
+      # Sempre atualizado, para que qualquer das duas configurações sirva a versão atual.
+      - name: Atualizar o ramo gh-pages
+        run: |
+          cd dist
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publicação de ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+
+      - name: Resumo
+        run: |
+          {
+            echo "### Publicação"
+            if [ "${{ steps.deploy.outcome }}" = "success" ]; then
+              echo "Publicado por Actions: ${{ steps.deploy.outputs.page_url }}"
+            else
+              echo "O ramo \`gh-pages\` foi atualizado com o build."
+              echo "Se o site ainda não abre, ative uma vez em **Settings → Pages**:"
+              echo "Source = *Deploy from a branch*, Branch = \`gh-pages\` / \`(root)\` (ou Source = *GitHub Actions*)."
+            fi
+            echo "Endereço esperado: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          } >> "$GITHUB_STEP_SUMMARY"

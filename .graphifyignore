@@ -1,0 +1,8 @@
+# fora do grafo de conhecimento (graphify)
+node_modules/
+dist/
+test-results/
+playwright-report/
+relatorios/
+package-lock.json
+graphify-out/
