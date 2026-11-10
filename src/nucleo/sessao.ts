@@ -26,6 +26,8 @@ export class Sessao<Sol = unknown> {
   readonly vista: Signal<VistaEstado | null>;
   /** pedido de reenquadramento: a cena observa e reage */
   readonly pedidoEnquadrar = signal(0);
+  /** pedido para a cena adotar o enquadramento gravado em `vista` (ao importar um estado) */
+  readonly pedidoVista = signal(0);
   readonly guardados: Signal<Partial<Record<NomeGuardado, Guardado>>>;
   readonly avisos = signal<Aviso[]>([]);
   readonly solucao: ReadonlySignal<Sol>;
@@ -251,6 +253,17 @@ export class Sessao<Sol = unknown> {
     return JSON.stringify(paraArquivo(this.def, this.valores.value, this.extras.value, this.vista.value, g), null, 2);
   }
 
+  /** Adota um estado lido de um link (já se sabe que é deste experimento). */
+  carregar(bruto: EstadoBruto) {
+    const v = validar(this.def, bruto);
+    this.aplicar(v.valores, v.extras);
+    this.avisos.value = v.avisos;
+    if (v.vista) {
+      this.vista.value = { ...v.vista };
+      this.pedidoVista.value++;
+    } else this.pedidoEnquadrar.value++;
+  }
+
   /** Carrega um arquivo de estado. Lança erro legível se o arquivo for de outro experimento. */
   importar(texto: string) {
     const bruto = lerArquivo(texto);
@@ -260,8 +273,10 @@ export class Sessao<Sol = unknown> {
     const v = validar(this.def, bruto);
     this.aplicar(v.valores, v.extras);
     this.avisos.value = v.avisos;
-    if (v.vista) this.vista.value = { ...v.vista };
-    else this.pedidoEnquadrar.value++;
+    if (v.vista) {
+      this.vista.value = { ...v.vista };
+      this.pedidoVista.value++;
+    } else this.pedidoEnquadrar.value++;
     return v;
   }
 }
