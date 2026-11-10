@@ -11,7 +11,8 @@ import { vistas, type Acoes, type PropsVista } from './experimentos/registro';
 import { Sessao, type NomeGuardado } from './nucleo/sessao';
 import { lerLink } from './nucleo/estado';
 import { Icone, Menu, Torradas, avisar } from './ui/componentes';
-import { carimbo, copiar, entregar, entregarTexto } from './ui/exportar';
+import { carimbo, copiar, entregar, entregarTexto, mensagemEntrega, type Entrega } from './ui/exportar';
+import { URL_PUBLICA, emArtefato } from './config';
 
 const sessoes = new Map<string, Sessao<any>>();
 const inicial = lerLink(location.hash);
@@ -43,10 +44,15 @@ effect(() => {
   void s.vista.value;
   clearTimeout(tLink);
   tLink = window.setTimeout(() => {
-    const l = s.link();
+    // embutida num Artifact, a página só pode usar âncoras simples (#optica); o estado completo vai no link público
+    const l = emArtefato() ? `#${s.def.id}` : s.link();
     if (l !== location.hash) {
       ultimoLink = l;
-      history.replaceState(null, '', l);
+      try {
+        history.replaceState(null, '', l);
+      } catch {
+        /* histórico indisponível neste visualizador */
+      }
     }
   }, 250);
 });
@@ -63,7 +69,12 @@ window.addEventListener('hashchange', () => {
 });
 
 function linkCompleto(s: Sessao<any>): string {
-  return location.origin + location.pathname + s.link();
+  return (emArtefato() ? URL_PUBLICA : location.origin + location.pathname) + s.link();
+}
+
+function dizer(r: Entrega, sucesso: string) {
+  const m = mensagemEntrega(r, sucesso);
+  if (m) avisar(m.texto, m.erro);
 }
 
 function Marca() {
@@ -148,16 +159,14 @@ function Barra({ s }: { s: Sessao<any> }) {
     if (!ac.exportarPNG) return;
     try {
       const blob = await ac.exportarPNG();
-      const como = await entregar(blob, `${s.def.id}-${carimbo()}.png`);
-      if (como === 'baixado') avisar('Imagem salva');
+      dizer(await entregar(blob, `${s.def.id}-${carimbo()}.png`), 'Imagem salva');
     } catch (e) {
       avisar((e as Error).message, true);
     }
   };
   const estado = async () => {
     fechar();
-    await entregarTexto(s.arquivo(), `${s.def.id}-${carimbo()}.estado.json`, 'application/json');
-    avisar('Estado salvo');
+    dizer(await entregarTexto(s.arquivo(), `${s.def.id}-${carimbo()}.estado.json`, 'application/json'), 'Estado salvo');
   };
   const abrir = async (arq: File) => {
     try {
@@ -222,7 +231,7 @@ function Barra({ s }: { s: Sessao<any> }) {
       )}
       {menu === 'comp' && (
         <Menu ancora={refComp.current} onFechar={fechar}>
-          <button class="item" role="menuitem" onClick={copiarLink}>Copiar link deste estado<small>Reabre o experimento com os mesmos parâmetros, medidas e enquadramento.</small></button>
+          <button class="item" role="menuitem" onClick={copiarLink}>Copiar link deste estado<small>Reabre o experimento com os mesmos parâmetros, medidas e enquadramento{emArtefato() ? ' (no endereço público do estúdio)' : ''}.</small></button>
           {linkVisivel && <textarea readOnly value={linkVisivel} onFocus={(e) => e.currentTarget.select()} aria-label="Link deste estado" />}
           {ac.exportarPNG && <button class="item" role="menuitem" onClick={imagem}>Imagem da cena (PNG)<small>Sem alças nem painéis, com legenda dos parâmetros.</small></button>}
           {ac.dados && <hr />}
@@ -230,8 +239,7 @@ function Barra({ s }: { s: Sessao<any> }) {
           {ac.dados?.().map((d) => (
             <button class="item" role="menuitem" onClick={async () => {
               fechar();
-              await entregarTexto(d.gerar(), `${s.def.id}-${d.id}-${carimbo()}.csv`, 'text/csv');
-              avisar('Dados salvos');
+              dizer(await entregarTexto(d.gerar(), `${s.def.id}-${d.id}-${carimbo()}.csv`, 'text/csv'), 'Dados salvos');
             }}>{d.titulo}</button>
           ))}
           <hr />

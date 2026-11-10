@@ -13,8 +13,10 @@ import { comprimentoMm, fmtFixo, marcas, passoRedondo, radParaGraus, grausParaRa
 import { cores, fontes, tracos, alfa as rgba } from '../../ui/tema';
 import { CamadaLuz, coefTom, curvaTom, corTom, type ModoLuz } from '../../ui/luz';
 import { canvasParaBlob } from '../../ui/exportar';
-import { Estado, flecha, inclinacao } from './modelo';
-import { MAXP, tracarLeque, pupilaDeU, type Leque, type Solucao } from './analise';
+import { flecha, inclinacao } from './modelo';
+import { tracarLeque, pupilaDeU, type Leque, type Solucao } from './analise';
+import { percorrer, TIPO_INC, TIPO_PERD, type Emitir } from './percurso';
+import { caixaPartes, larguraPartes, type Parte } from '../../ui/rotulos';
 import { configDeValores } from './definicao';
 
 type IdAlca = 'abertura+' | 'abertura-' | 'anteparo' | 'curvatura' | 'incidencia' | 'feixe+' | 'feixe-' | 'prova';
@@ -34,93 +36,6 @@ type Arraste =
 export interface OpcoesCena {
   /** força o caminho Canvas 2D da camada de luz (teste do modo de compatibilidade) */
   luz2d?: boolean;
-}
-
-const TIPO_INC = 0;
-const TIPO_REF = 1;
-const TIPO_PERD = 2;
-
-type Emitir = (z0: number, y0: number, z1: number, y1: number, semirreta: boolean, tipo: number) => void;
-
-/**
- * Percorre os trechos desenháveis do raio i de um leque. Coordenadas do mundo;
- * em semirretas (z1, y1) é a direção. Com anteparo opaco, o raio termina no impacto.
- */
-function percorrer(L: Leque, i: number, sa: number, ca: number, zs: number, H: number, opaco: boolean, emit: Emitir) {
-  const nr = L.nRefl[i];
-  if (nr === 0) {
-    // não atinge o espelho: reta inteira pelo ponto p0 = (y = u cos α, z = −u sen α)
-    const u = L.u[i];
-    const y0 = u * ca;
-    const z0 = -u * sa;
-    if (L.estado[i] === Estado.Bloqueado) {
-      emit(L.pFinal[3 * i + 2], L.pFinal[3 * i + 1], ca, sa, true, TIPO_INC);
-      return;
-    }
-    emit(z0, y0, ca, sa, true, TIPO_PERD);
-    emit(z0, y0, -ca, -sa, true, TIPO_PERD);
-    return;
-  }
-  const base = i * MAXP * 3;
-  // trecho incidente: semirreta do primeiro ponto de reflexão para trás (−d0)
-  emit(L.pontos[base + 2], L.pontos[base + 1], ca, sa, true, TIPO_INC);
-  const guardados = Math.min(nr, MAXP);
-  const seg = L.segImp[i];
-  const corta = opaco && seg >= 0 && Math.abs(L.yImp[i]) <= H;
-  for (let k = 0; k < guardados; k++) {
-    const o = base + 3 * k;
-    const py = L.pontos[o + 1];
-    const pz = L.pontos[o + 2];
-    if (corta && seg === k) {
-      emit(pz, py, zs, L.yImp[i], false, TIPO_REF);
-      return;
-    }
-    if (k + 1 < nr) {
-      if (k + 1 >= guardados) return;
-      emit(pz, py, L.pontos[o + 5], L.pontos[o + 4], false, TIPO_REF);
-    } else if (L.estado[i] === Estado.Refletido) {
-      emit(pz, py, L.dirs[o + 2], L.dirs[o + 1], true, TIPO_REF);
-    }
-  }
-}
-
-/** Trecho de um rótulo: itálico matemático, romano matemático, subscrito ou texto da interface. */
-type Parte = [texto: string, estilo: 'it' | 'reta' | 'sub' | 'ui'];
-
-function fonteParte(estilo: Parte[1], tam: number): string {
-  if (estilo === 'it') return `italic ${tam + 2}px ${fontes.mat}`;
-  if (estilo === 'reta') return `${tam + 1}px ${fontes.matReta}`;
-  if (estilo === 'sub') return `italic ${Math.round(tam * 0.82)}px ${fontes.mat}`;
-  return `${tam}px ${fontes.ui}`;
-}
-
-function larguraPartes(ctx: CanvasRenderingContext2D, partes: Parte[], tam: number): number {
-  let w = 0;
-  for (const [t, e] of partes) {
-    ctx.font = fonteParte(e, tam);
-    w += ctx.measureText(t).width + (e === 'sub' ? 1 : 0);
-  }
-  return w;
-}
-
-/** Desenha as partes a partir de x (à esquerda), centradas verticalmente em y. */
-function desenharPartes(ctx: CanvasRenderingContext2D, partes: Parte[], x: number, y: number, tam: number, cor: string) {
-  ctx.fillStyle = cor;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  for (const [t, e] of partes) {
-    ctx.font = fonteParte(e, tam);
-    ctx.fillText(t, x, y + (e === 'sub' ? tam * 0.3 : 0.5));
-    x += ctx.measureText(t).width + (e === 'sub' ? 1 : 0);
-  }
-}
-
-/** Rótulo com fundo escuro, centrado em (x, y). */
-function caixaPartes(ctx: CanvasRenderingContext2D, partes: Parte[], x: number, y: number, tam: number, cor: string) {
-  const w = larguraPartes(ctx, partes, tam);
-  ctx.fillStyle = 'rgba(5,7,10,0.84)';
-  ctx.fillRect(Math.round(x - w / 2 - 5), Math.round(y - tam * 0.72), Math.round(w + 10), Math.round(tam * 1.5));
-  desenharPartes(ctx, partes, x - w / 2, y, tam, cor);
 }
 
 export class CenaOptica {

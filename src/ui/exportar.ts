@@ -2,13 +2,33 @@
  * Saída de arquivos: imagem, dados e estado. No iPad usa a folha de
  * compartilhamento quando o navegador aceita arquivos; senão, baixa.
  */
+import { emArtefato } from '../config';
+
 export function carimbo(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
-export async function entregar(blob: Blob, nome: string): Promise<'compartilhado' | 'baixado'> {
+export type Entrega = 'compartilhado' | 'baixado' | 'recusado' | 'indisponivel';
+
+/**
+ * Entrega um arquivo gerado na página.
+ *  - dentro de um Artifact do claude.ai, pela capacidade `downloads` (o visitante confirma);
+ *  - em tela de toque, pela folha de compartilhamento, se aceitar arquivos;
+ *  - nos demais casos, por download comum.
+ */
+export async function entregar(blob: Blob, nome: string): Promise<Entrega> {
+  if (emArtefato()) {
+    try {
+      const d = await (globalThis as any).claude.use('downloads');
+      if (!d) return 'indisponivel';
+      await d.save({ filename: nome, data: blob });
+      return 'baixado';
+    } catch (e) {
+      return (e as { code?: string })?.code === 'declined' ? 'recusado' : 'indisponivel';
+    }
+  }
   const arquivo = new File([blob], nome, { type: blob.type });
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
   const toque = matchMedia('(pointer: coarse)').matches;
@@ -17,7 +37,7 @@ export async function entregar(blob: Blob, nome: string): Promise<'compartilhado
       await nav.share({ files: [arquivo], title: nome });
       return 'compartilhado';
     } catch (e) {
-      if ((e as DOMException)?.name === 'AbortError') return 'compartilhado';
+      if ((e as DOMException)?.name === 'AbortError') return 'recusado';
     }
   }
   const url = URL.createObjectURL(blob);
@@ -29,6 +49,13 @@ export async function entregar(blob: Blob, nome: string): Promise<'compartilhado
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
   return 'baixado';
+}
+
+/** Mensagem curta para o resultado de uma entrega (null = nada a dizer). */
+export function mensagemEntrega(r: Entrega, sucesso: string): { texto: string; erro: boolean } | null {
+  if (r === 'baixado') return { texto: sucesso, erro: false };
+  if (r === 'indisponivel') return { texto: 'Este visualizador não permite salvar arquivos. Abra o estúdio pelo endereço público.', erro: true };
+  return null;
 }
 
 export function entregarTexto(texto: string, nome: string, tipo: string) {

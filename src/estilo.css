@@ -67,7 +67,7 @@ button { cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: env(safe-area-inset-top) 8px 0 12px;
+  padding: env(safe-area-inset-top) 12px 0 16px;
   background: var(--painel);
   border-bottom: 1px solid var(--linha);
   min-width: 0;
