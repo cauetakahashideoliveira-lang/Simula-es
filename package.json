@@ -1,0 +1,35 @@
+{
+  "name": "estudio-de-simulacoes",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Estúdio interativo de simulações físicas e matemáticas",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "medir": "tsx scripts/medir.ts",
+    "desempenho": "node scripts/desempenho.mjs"
+  },
+  "dependencies": {
+    "@fontsource/barlow": "5.3.0",
+    "@fontsource/barlow-semi-condensed": "5.3.0",
+    "@preact/signals": "2.11.4",
+    "katex": "0.19.1",
+    "preact": "11.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@preact/preset-vite": "2.10.6",
+    "@types/katex": "0.16.8",
+    "@types/node": "26.6.6",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.7",
+    "vitest": "5.1.0"
+  }
+}
