@@ -42,14 +42,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # os espelhos do Ubuntu falham de vez em quando (DNS): até três tentativas
+      # Com dependências do sistema; se os espelhos do Ubuntu estiverem fora (já aconteceu:
+      # falha de DNS no runner), instala só o navegador, que vem do CDN do Playwright.
+      # A imagem do runner já tem as bibliotecas do Chrome e o estúdio traz as próprias fontes.
       - name: Instalar o Chromium do Playwright
-        run: |
-          for i in 1 2 3; do
-            npx playwright install --with-deps chromium && exit 0
-            echo "tentativa $i falhou; nova tentativa em 30 s"; sleep 30
-          done
-          exit 1
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
       - run: npm run test:e2e
 
   publicar:
