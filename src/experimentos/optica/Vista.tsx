@@ -249,6 +249,34 @@ function Painel({ sessao }: { sessao: S }) {
   );
 }
 
+/** Resumo do que a cena mostra, para leitores de tela. */
+export function descreverCena(sol: Solucao): string {
+  const c = sol.cfg;
+  const e = c.espelho;
+  const sup = e.kappa === 0 ? 'esférico' : e.kappa === -1 ? 'parabólico' : `cônico, κ = ${fmtFixo(e.kappa, 2)}`;
+  const partes = [
+    `Espelho ${sup}, raio de curvatura ${fmtFixo(e.R, 1)} mm, foco paraxial em ${fmtFixo(sol.f, 1)} mm, abertura ${fmtFixo(e.a, 1)} mm.`,
+    `Feixe ${Math.abs(c.feixe.alfa) < 1e-12 ? 'paralelo ao eixo' : `inclinado ${fmtFixo(radParaGraus(c.feixe.alfa), 2)} graus`}.`,
+    `Anteparo em ${fmtFixo(c.zs, 2)} mm: ${sol.anteparo.validos ? `largura ${comprimentoMm(sol.anteparo.W, 4)}, ${fmtFixo(100 * sol.anteparo.fracao, 0)} % dos raios` : 'nenhum raio refletido o atinge'}.`,
+  ];
+  const pr = sol.prova;
+  const r0 = pr?.traco.reflexoes[0];
+  if (pr && r0) {
+    partes.push(`Raio de prova a ${fmtFixo(pr.u, 2)} mm do eixo: incidência e reflexão de ${fmtFixo(radParaGraus(r0.thetaI), 2)} graus; ${pr.zCruz === null ? 'não cruza o eixo' : `cruza o eixo em ${fmtFixo(pr.zCruz, 3)} mm, ${comprimentoMm(pr.zCruz - sol.f, 4)} do foco paraxial`}.`);
+  }
+  return partes.join(' ');
+}
+
+function Descricao({ sessao }: { sessao: S }) {
+  const sol = sessao.solucao.value;
+  const [texto, setTexto] = useState(() => descreverCena(sol));
+  useEffect(() => {
+    const t = window.setTimeout(() => setTexto(descreverCena(sol)), 700);
+    return () => clearTimeout(t);
+  }, [sol]);
+  return <p class="sr-only" aria-live="polite" id="descricao-cena-optica">{texto}</p>;
+}
+
 export default function VistaOptica({ sessao, acoes, convite }: PropsVista<Solucao>) {
   const refCena = useRef<HTMLDivElement>(null);
   const cena = useRef<CenaOptica | null>(null);
@@ -323,7 +351,8 @@ export default function VistaOptica({ sessao, acoes, convite }: PropsVista<Soluc
   const cv = convite.value;
   return (
     <div class="exp">
-      <div class="cena" ref={refCena} onPointerDown={() => { if (convite.peek()) convite.value = null; }}>
+      <div class="cena" ref={refCena} aria-describedby="descricao-cena-optica" onPointerDown={() => { if (convite.peek()) convite.value = null; }}>
+        <Descricao sessao={sessao} />
         <div class="legenda-cena">
           Seção meridional de um espelho de revolução
           {modoLuz === 'canvas2d' && ' — camada de luz em modo de compatibilidade (8 bits)'}

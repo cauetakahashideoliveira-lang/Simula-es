@@ -5,7 +5,7 @@ Este documento registra como o estúdio foi construído numa sessão de agente d
 ## 1. Estado de entrega
 
 - Dois experimentos completos sobre o mesmo núcleo: **bancada de óptica** (estático, traçado de raios 3D em cônicas de revolução) e **osciladores acoplados** (dinâmico, integração numérica com histórico).
-- **149 testes científicos e do núcleo** (Vitest) e **75 testes de navegador** em três perfis (tablet paisagem, tablet retrato, desktop; 70 executam em cada rodada completa e 5 são específicos de um perfil).
+- **149 testes científicos e do núcleo** (Vitest) e **84 testes de navegador** em três perfis (tablet paisagem, tablet retrato, desktop; 77 executam em cada rodada completa e 7 são específicos de um perfil).
 - CI no GitHub Actions: tipos, testes, build, testes de navegador e publicação.
 - Publicação: build no ramo `gh-pages` a cada push; o GitHub Pages ainda precisa ser **ativado uma vez à mão** (§8). Uma cópia roda como Artifact no claude.ai (privada do dono).
 - Documentos: `README.md`, `CLAUDE.md`, `docs/novo-experimento.md`, `docs/verificacao.md`, `docs/desempenho.md` e este.
@@ -133,6 +133,8 @@ Só `graphify-out/GRAPH_REPORT.md` é versionado (`.gitignore`); `graph.json` e 
 | Primeira paleta reprovada pelo validador | Passos mais escuros da mesma família de cores. |
 | Fontes do canvas carregam depois do primeiro quadro | Redesenhar quando `document.fonts.load` resolver. |
 | Embutido como Artifact, o endereço só aceita `#nome` e downloads diretos são bloqueados | `src/config.ts` detecta o visualizador; link de estado usa o endereço público; arquivos saem pela capacidade `downloads`. |
+| O service worker não achava os módulos guardados ao recarregar sem rede | O Vite pede módulos com `crossorigin` e o servidor responde `Vary: Origin`; `cache.match` precisa de `ignoreVary: true`. |
+| Teste que esperava 500 ms pelo link falhou com os testes em paralelo | Esperar a condição (`expect.poll` até o endereço igualar `sessao.link()`), nunca um tempo fixo. |
 | Reinício do processo do agente no meio do trabalho | Commits pequenos e frequentes; checar `git status` ao voltar. |
 
 ## 9. Como retomar numa sessão nova
@@ -145,11 +147,13 @@ Só `graphify-out/GRAPH_REPORT.md` é versionado (`.gitignore`); `graph.json` e 
 
 ## 10. Próximos passos sugeridos
 
+Já feitos depois da primeira entrega: comparação simultânea com o estado guardado nos instrumentos da óptica, funcionamento offline (service worker com teste de rede desligada), descrição textual da cena para leitores de tela, barra superior para telefone.
+
 Em ordem de valor para quem usa:
 
-1. **Ativar o GitHub Pages** (um clique, §8) e abrir no iPad real. Conferir no Safari: alvo de ponto flutuante do WebGL2 (há alternativa), folha de compartilhamento, gestos do sistema.
-2. **Comparação A/B lado a lado** (hoje alterna; lado a lado mostraria esfera e parábola ao mesmo tempo).
-3. **Funcionamento offline** (service worker) para usar a bancada sem rede.
+1. **Ativar o GitHub Pages** (um clique, §8) e abrir no iPad real. Conferir no Safari: alvo de ponto flutuante do WebGL2 (há alternativa), folha de compartilhamento, gestos do sistema, instalação na tela inicial e uso sem rede.
+2. **Referência do estado guardado também na cena**: raios do outro estado como traço fantasma, para ver a mudança de geometria e não só a dos gráficos.
+3. **Comparação nos osciladores**: o mesmo mecanismo (`useFantasma` em `optica/instrumentos.tsx`) aplicado aos gráficos de energia e de posições.
 4. **Modo ondulatório** como modelo próprio: integral de Huygens–Fresnel sobre a pupila, com comprimento de onda, escala e validação próprias (comparar com o disco de Airy da parábola). Só depois deste, franjas na tela.
 5. **Novos experimentos** pelo guia: refração em lente espessa (reaproveita o traçado), pêndulo duplo (reaproveita o motor dinâmico e expõe caos), cadeia de N osciladores (modos e dispersão).
-6. **Acessibilidade da cena:** descrição textual do estado (posição do anteparo, largura, raio selecionado) para leitores de tela.
+6. **Solução em worker** para a cena exigente (leque de 20 001 raios + mancha de 20 000 em ~16 ms): mover `resolver` para um Web Worker liberaria o fio principal durante o arrasto.

@@ -67,6 +67,23 @@ function conjuntos(s: S, motor: Motor): ConjuntoDados[] {
   ];
 }
 
+/** Resumo para leitores de tela, atualizado só com o relógio parado. */
+function Descricao({ motor }: { motor: Motor }) {
+  const rodando = motor.rodando.value;
+  const i = motor.cursor.value;
+  void motor.versao.value;
+  if (rodando) return <p class="sr-only" aria-live="polite">Simulação em andamento.</p>;
+  const s = motor.sim;
+  const m = modosNormais(motor.cfg.p);
+  const E0 = s.energiaEm(0);
+  return (
+    <p class="sr-only" aria-live="polite" id="descricao-cena-osc">
+      {`Pausado em t = ${fmtFixo(i * s.dt, 3)} s. Massa 1 a ${fmtFixo(100 * s.qEm(i, 0), 2)} cm do equilíbrio, massa 2 a ${fmtFixo(100 * s.qEm(i, 1), 2)} cm. `}
+      {`Modos normais: ${fmtFixo(m.omegaBaixa, 3)} e ${fmtFixo(m.omegaAlta, 3)} rad/s. Deriva de energia ${fmtSig(E0 > 0 ? s.energiaEm(i) / E0 - 1 : 0, 2)}.`}
+    </p>
+  );
+}
+
 function Tempo({ motor }: { motor: Motor }) {
   const t = motor.cursor.value * motor.cfg.dt;
   void motor.versao.value;
@@ -235,6 +252,7 @@ export default function VistaOsciladores({ sessao, acoes, convite }: PropsVista<
           </div>
         )}
         {motor && <Transporte motor={motor} />}
+        {motor && <Descricao motor={motor} />}
       </div>
       {motor ? <Graficos motor={motor} /> : <section class="instr" />}
       {motor ? <Painel sessao={sessao} motor={motor} /> : <aside class="painel" />}

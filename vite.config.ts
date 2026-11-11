@@ -9,6 +9,8 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    // lista de arquivos do build que o service worker guarda para uso offline
+    manifest: 'manifesto-build.json',
     chunkSizeWarningLimit: 900,
   },
   test: {

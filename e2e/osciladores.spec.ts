@@ -168,7 +168,7 @@ test.describe('osciladores acoplados', () => {
     await page.getByRole('button', { name: 'Tocar' }).click();
     await page.waitForTimeout(900);
     await page.getByRole('button', { name: 'Pausar' }).click();
-    await page.waitForTimeout(450);
+    await expect.poll(() => page.evaluate(() => location.hash === (window as any).__estudio.sessao.link()), { timeout: 5000 }).toBe(true);
     const e = await estado(page);
     const link = page.url();
     expect(link).toContain(`x.passos=${e.passo}`);

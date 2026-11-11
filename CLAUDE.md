@@ -16,7 +16,7 @@ Container novo sem `graphify` ou sem `node_modules`: `bash scripts/ambiente.sh`.
 ```sh
 npm run dev                        # http://localhost:5173
 npm test                           # 149 testes científicos e do núcleo (Vitest, < 1 s)
-npm run test:e2e                   # build + 75 testes de navegador (Playwright, ~1 min)
+npm run test:e2e                   # build + 84 testes de navegador (Playwright, ~1,5 min)
 npm run build                      # tipos + build em dist/
 npm run medir -- optica a=120 x.prova=1          # grandezas sem renderizador
 node scripts/captura.mjs http://127.0.0.1:5173/ <pasta> '#/optica?f=1&e=1&a=150'
@@ -59,6 +59,8 @@ Capture 1180×820 e 820×1180 com `deviceScaleFactor: 2` e toque, mais uma largu
 - Não há iPad nem WebKit: verificações de Safari ficam como pendência declarada.
 - O processo do agente pode reiniciar: arquivos ficam, servidores (vite) morrem. Faça commit e push a cada marco.
 - GitHub: `gh` só para busca; Actions, logs e PRs pelo servidor MCP do GitHub. Desenvolva no ramo designado da sessão.
+- Testes de navegador rodam em paralelo: espere condições (`expect.poll`), nunca tempos fixos.
+- O service worker (`public/sw.js`) só registra fora do Artifact e fora de testes; para testá-lo, abra com `?sw=1`.
 - Python do sistema recusa `pip install` global: use venv (o `scripts/ambiente.sh` já faz isso para o graphify).
 
 ## Publicar

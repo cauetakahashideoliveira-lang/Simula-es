@@ -11,7 +11,7 @@ Estúdio interativo de simulações físicas, feito para investigar com o dedo: 
 | **Bancada de óptica** | Feixe paralelo num espelho côncavo esférico, parabólico ou cônico geral. Arrastar a borda do espelho, o anteparo, o centro de curvatura e a incidência; tocar num raio para ver ponto de incidência, tangente, normal, θᵢ e θᵣ e onde ele cruza o eixo. Instrumentos: perfil no anteparo, mancha 3D com energia contida, aberração longitudinal, varredura do anteparo. |
 | **Osciladores acoplados** | Duas massas e três molas. Puxar uma massa e soltar; pausar, avançar passo a passo, voltar no tempo pelo gráfico. Posições, energia por parte, frequências dos modos em função do acoplamento, plano x₁–x₂. Quatro integradores para comparar a deriva de energia. |
 
-Nos dois: predefinições de investigação, dois estados guardados (A/B) que alternam sem perder o enquadramento, desfazer/refazer, camada de explicação com as equações avaliadas nos parâmetros atuais, link que reabre o mesmo estado, exportação de imagem (PNG), dados com nomes e unidades (CSV) e estado versionado (JSON).
+Nos dois: predefinições de investigação, dois estados guardados (A/B) que alternam sem perder o enquadramento (na óptica, o outro estado aparece como referência tracejada nos quatro instrumentos, com seus números), desfazer/refazer, camada de explicação com as equações avaliadas nos parâmetros atuais, link que reabre o mesmo estado, exportação de imagem (PNG), dados com nomes e unidades (CSV) e estado versionado (JSON). No endereço público, funciona sem rede depois da primeira visita e pode ser instalado na tela inicial do iPad.
 
 ## Rodar
 

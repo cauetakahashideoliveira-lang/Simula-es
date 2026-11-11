@@ -221,7 +221,8 @@ test.describe('bancada de óptica', () => {
     const p = await alca(page, 'anteparo');
     await arrastar(page, !!hasTouch, p, { x: p.x - 13.7, y: p.y });
     await page.getByRole('button', { name: 'Ampliar', exact: true }).click();
-    await page.waitForTimeout(500); // o link é atualizado com pequeno atraso
+    // o link é atualizado com pequeno atraso: espera o endereço refletir o estado da sessão
+    await expect.poll(() => page.evaluate(() => location.hash === (window as any).__estudio.sessao.link()), { timeout: 5000 }).toBe(true);
     const link = page.url();
     expect(link).toContain('#/optica?f=1&e=1');
     expect(link).toContain('vista=');

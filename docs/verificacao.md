@@ -35,9 +35,9 @@ A revisão independente também corrigiu um erro meu: eu havia escrito que a seg
 
 Link e arquivo JSON fazem a viagem de ida e volta devolvendo os **mesmos doubles**, e portanto as mesmas medidas, nos dois experimentos. Nos testes de navegador o link é aberto numa sessão nova (sem armazenamento compartilhado) e compara parâmetros, extras, medidas e enquadramento por igualdade exata; nos osciladores, o instante (`passos`) e o estado naquele instante.
 
-## Navegador (`e2e/`, 75 testes em 3 projetos)
+## Navegador (`e2e/`, 84 testes em 3 projetos)
 
-Gestos reais enviados pelo protocolo do Chromium (toque de um e dois dedos) e pelo mouse: arrastar a borda do espelho, o anteparo (pelo pegador e pela linha), o ponto de incidência; tocar num raio; pinça em torno do foco; trocar só a superfície preservando abertura, anteparo, feixe, enquadramento e escala do gráfico; estados A/B; campo numérico com vírgula, domínio e entrada inválida; zoom de 2×10⁶ px/mm; exportação de PNG, CSV e JSON; rotação do tablet; modo de compatibilidade sem WebGL de ponto flutuante; puxar uma massa; tocar, pausar, passo; voltar no tempo pelo gráfico.
+Gestos reais enviados pelo protocolo do Chromium (toque de um e dois dedos) e pelo mouse: arrastar a borda do espelho, o anteparo (pelo pegador e pela linha), o ponto de incidência; tocar num raio; pinça em torno do foco; trocar só a superfície preservando abertura, anteparo, feixe, enquadramento e escala do gráfico; estados A/B; campo numérico com vírgula, domínio e entrada inválida; zoom de 2×10⁶ px/mm; exportação de PNG, CSV e JSON; rotação do tablet; modo de compatibilidade sem WebGL de ponto flutuante; puxar uma massa; tocar, pausar, passo; voltar no tempo pelo gráfico; comparação com o estado guardado nos quatro instrumentos, com os números do outro estado; descrição textual da cena para leitores de tela; funcionamento sem rede depois da primeira visita (service worker), inclusive do experimento que ainda não tinha sido aberto.
 
 ## O que foi emulação, e o que não foi testado
 

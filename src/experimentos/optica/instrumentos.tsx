@@ -123,10 +123,41 @@ const textoCurto = (ctx: CanvasRenderingContext2D, t: string, x: number, y: numb
   ctx.fillText(t, x, y);
 };
 
+// ————— comparação com o outro estado guardado —————
+
+const cacheFantasma = new WeakMap<object, Solucao>();
+const COR_FANTASMA = cores.neutro;
+const TRACO_FANTASMA = [4, 3];
+
+/**
+ * O outro estado guardado (A ou B), resolvido para servir de referência nos
+ * gráficos: com o estado atual igual a A, compara com B, e vice-versa; com um
+ * estado que não é nenhum dos dois, compara com A (ou com B, se só ele existir).
+ * A solução fica em cache enquanto o estado guardado não for regravado.
+ */
+export function useFantasma(sessao: Sessao<Solucao>): { nome: 'A' | 'B'; sol: Solucao } | null {
+  const g = sessao.guardados.value;
+  const atual = sessao.guardadoAtivo.value;
+  const nome = atual === 'A' ? (g.B ? 'B' : null) : atual === 'B' ? (g.A ? 'A' : null) : g.A ? 'A' : g.B ? 'B' : null;
+  if (!nome) return null;
+  const est = g[nome]!;
+  let sol = cacheFantasma.get(est);
+  if (!sol) {
+    sol = sessao.def.resolver(est.valores, est.extras);
+    cacheFantasma.set(est, sol);
+  }
+  return { nome, sol };
+}
+
+function LegendaFantasma({ f }: { f: { nome: string } | null }) {
+  return f ? <span data-fantasma={f.nome}><i style={`border-color:${COR_FANTASMA};border-top-style:dashed`} />estado {f.nome} (guardado)</span> : null;
+}
+
 // ————— perfil transversal —————
 
 function Perfil({ sessao }: PropsI) {
   const sol = sessao.solucao.value;
+  const fant = useFantasma(sessao);
   const [ref, tam] = useTamanho<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
   const m = sol.anteparo;
@@ -159,6 +190,30 @@ function Perfil({ sessao }: PropsI) {
       const x = X(p.bordas[k]) + 0.5;
       const y = Y(p.C[k]);
       ctx.fillRect(x, Math.min(y, a.y + a.h - 1), lw, Math.max(1, a.y + a.h - y));
+    }
+    // outro estado guardado: contorno em degraus, mesma janela e mesmos intervalos
+    if (fant) {
+      const pf = perfil(fant.sol.leque, fant.sol.cfg.H, centro, j.semi, nBins);
+      let k0 = -1, k1 = -1;
+      for (let k = 0; k < nBins; k++) if (pf.C[k] > 0) { if (k0 < 0) k0 = k; k1 = k; }
+      if (k0 >= 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(a.x, a.y, a.w, a.h);
+        ctx.clip();
+        ctx.strokeStyle = COR_FANTASMA;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash(TRACO_FANTASMA);
+        ctx.beginPath();
+        ctx.moveTo(X(pf.bordas[k0]), Y(0));
+        for (let k = k0; k <= k1; k++) {
+          ctx.lineTo(X(pf.bordas[k]), Y(pf.C[k]));
+          ctx.lineTo(X(pf.bordas[k + 1]), Y(pf.C[k]));
+        }
+        ctx.lineTo(X(pf.bordas[k1 + 1]), Y(0));
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     // referência teórica: imagem paraxial
     const xf = X(centro);
@@ -231,15 +286,17 @@ function Perfil({ sessao }: PropsI) {
       ctx.stroke();
       etiqueta(ctx, [`y = ${comprimentoMm(yc, 4)}`, `C = ${fmtSig(p.C[k], 3)}×`, `intervalo: ${comprimentoMm(p.dy, 3)}`], xc, Math.max(a.y + 30, Y(p.C[k])), a);
     }
-  }, [sol, tam.w, tam.h, j.semi, ptr?.x, ptr?.y]);
+  }, [sol, fant?.sol, tam.w, tam.h, j.semi, ptr?.x, ptr?.y]);
 
   return (
     <>
       <div class="grafico" ref={ref} data-instr="perfil"><canvas ref={canvas} /></div>
       <div class="lateral">
         <ControleJanela j={j} />
+        {fant && <div class="legenda"><span><i style={`border-color:${cores.luz}`} />atual</span><LegendaFantasma f={fant} /></div>}
         <div class="medidas">
           <Medida simbolo="W" nome="largura total" valor={m.validos ? comprimentoMm(m.W, 4) : '—'} destaque def="y_máx − y_mín dos raios do leque de medida no anteparo." />
+          {fant && <Medida simbolo="W" nome={`no estado ${fant.nome}`} valor={fant.sol.anteparo.validos ? comprimentoMm(fant.sol.anteparo.W, 4) : '—'} />}
           <Medida simbolo="\sigma_y" nome="desvio RMS" valor={m.validos ? comprimentoMm(m.rms, 4) : '—'} />
           <Medida nome="raios no anteparo" valor={`${fmtFixo(100 * m.fracao, 1)} %`} def={`${m.validos} de ${m.total} raios meridionais, pesos iguais por unidade de altura do feixe.`} />
         </div>
@@ -252,6 +309,7 @@ function Perfil({ sessao }: PropsI) {
 
 function Mancha({ sessao }: PropsI) {
   const sol = sessao.solucao.value;
+  const fant = useFantasma(sessao);
   const [ref, tam] = useTamanho<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
   const M = sol.mancha();
@@ -323,13 +381,30 @@ function Mancha({ sessao }: PropsI) {
       let k = 0;
       for (let i = 0; i < M.n; i++) if (M.valido[i]) d[k++] = Math.hypot(M.x[i] - M.cx, M.y[i] - M.cy);
       d.sort();
-      const rmax = Math.max(M.rMax, 1e-12);
+      const MF = fant ? fant.sol.mancha() : null;
+      const rmax = Math.max(M.rMax, MF && MF.validos ? MF.rMax : 0, 1e-12);
       const u2 = unidadePara(rmax);
       const bx = { min: 0, max: rmax * 1.04, titulo: `raio em torno do centroide (${u2.un})`, fator: u2.fator };
       const by = { min: 0, max: 1, titulo: 'fração da potência contida', alvo: 4 };
       desenharEixos(ctx, b, bx, by, {});
       const BX = mapa(bx.min, bx.max, b.x, b.x + b.w);
       const BY = mapa(0, 1, b.y + b.h, b.y);
+      if (MF && MF.validos) {
+        const df = new Float64Array(MF.validos);
+        let q = 0;
+        for (let i = 0; i < MF.n; i++) if (MF.valido[i]) df[q++] = Math.hypot(MF.x[i] - MF.cx, MF.y[i] - MF.cy);
+        df.sort();
+        ctx.strokeStyle = COR_FANTASMA;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash(TRACO_FANTASMA);
+        ctx.beginPath();
+        ctx.moveTo(BX(0), BY(0));
+        const pf = Math.max(1, Math.floor(MF.validos / 400));
+        for (let i = 0; i < MF.validos; i += pf) ctx.lineTo(BX(df[i]), BY((i + 1) / MF.validos));
+        ctx.lineTo(BX(df[MF.validos - 1]), BY(1));
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       ctx.strokeStyle = cores.luz;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -366,7 +441,7 @@ function Mancha({ sessao }: PropsI) {
       const wy = ey.max - ((ptr.y - a.y) / a.h) * (ey.max - ey.min);
       etiqueta(ctx, [`x = ${comprimentoMm(wx, 4)}`, `y = ${comprimentoMm(wy, 4)}`], ptr.x, ptr.y, a);
     }
-  }, [sol, tam.w, tam.h, j.semi, ptr?.x, ptr?.y]);
+  }, [sol, fant?.sol, tam.w, tam.h, j.semi, ptr?.x, ptr?.y]);
 
   return (
     <>
@@ -377,9 +452,11 @@ function Mancha({ sessao }: PropsI) {
           <span><i style={`border-color:${cores.selecao}`} />raio RMS</span>
           <span><i style={`border-color:${cores.selecao};border-top-style:dotted`} />80 %</span>
           <span><i class="pt" style={`background:${cores.teoria}`} />imagem paraxial</span>
+          <LegendaFantasma f={fant} />
         </div>
         <div class="medidas">
           <Medida simbolo="r_\mathrm{RMS}" nome="raio RMS" valor={M.validos ? comprimentoMm(M.rRms, 4) : '—'} destaque def="√⟨|r − r̄|²⟩ de um feixe 3D amostrado uniformemente em área." />
+          {fant && <Medida simbolo="r_\mathrm{RMS}" nome={`no estado ${fant.nome}`} valor={fant.sol.mancha().validos ? comprimentoMm(fant.sol.mancha().rRms, 4) : '—'} />}
           <Medida simbolo="r_{80}" nome="contém 80 %" valor={M.validos ? comprimentoMm(M.r80, 4) : '—'} />
           <Medida nome="ganho médio em r₈₀" valor={Number.isFinite(M.ganho80) ? `${fmtSig(M.ganho80, 3)}×` : '—'} def="Irradiância média dentro de r₈₀ dividida pela do feixe incidente." />
           <Medida nome="potência no anteparo" valor={`${fmtFixo(100 * M.fracao, 1)} %`} />
@@ -393,6 +470,7 @@ function Mancha({ sessao }: PropsI) {
 
 function Aberracao({ sessao }: PropsI) {
   const sol = sessao.solucao.value;
+  const fant = useFantasma(sessao);
   const [ref, tam] = useTamanho<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
   const areaRef = useRef<{ a: Area; u0: number; u1: number } | null>(null);
@@ -424,10 +502,21 @@ function Aberracao({ sessao }: PropsI) {
       if (d < dMin) dMin = d;
       if (d > dMax) dMax = d;
     }
+    const LF = fant ? fant.sol.leque : null;
+    if (LF && fant) {
+      for (let i = 0; i < LF.n; i++) {
+        const d = LF.zCruz[i] - fant.sol.f;
+        if (Number.isNaN(d) || LF.nRefl[i] !== 1 || Math.abs(d) > 3 * fant.sol.cfg.espelho.R) continue;
+        if (d < dMin) dMin = d;
+        if (d > dMax) dMax = d;
+      }
+    }
     const amp = Math.max(Math.abs(dMin), Math.abs(dMax), 1e-9 * e.R);
     const [y0, y1] = intervalo(dMin, dMax, 0.12, true);
     const { un, fator } = unidadePara(amp);
-    const ex = { min: sol.intervalo[0], max: sol.intervalo[1], titulo: noEixo ? 'altura h do raio no feixe (mm)' : 'coordenada u do raio no feixe (mm)' };
+    const u0 = Math.min(sol.intervalo[0], fant ? fant.sol.intervalo[0] : Infinity);
+    const u1 = Math.max(sol.intervalo[1], fant ? fant.sol.intervalo[1] : -Infinity);
+    const ex = { min: u0, max: u1, titulo: noEixo ? 'altura h do raio no feixe (mm)' : 'coordenada u do raio no feixe (mm)' };
     const ey = { min: Math.min(y0, -amp * 0.08), max: Math.max(y1, amp * 0.08), titulo: `Δz = z× − f (${un})`, fator };
     areaRef.current = { a, u0: ex.min, u1: ex.max };
     desenharEixos(ctx, a, ex, ey, {});
@@ -449,6 +538,27 @@ function Aberracao({ sessao }: PropsI) {
         if (i === 0) ctx.moveTo(X(u), Y(d)); else ctx.lineTo(X(u), Y(d));
       }
       ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    const curva = (Lc: typeof L, f: number) => {
+      ctx.beginPath();
+      let ab = false;
+      let na = -1;
+      for (let i = 0; i < Lc.n; i++) {
+        const z = Lc.zCruz[i];
+        if (Number.isNaN(z) || (Lc.nRefl[i] !== na && ab)) ab = false;
+        na = Lc.nRefl[i];
+        if (Number.isNaN(z)) continue;
+        if (!ab) ctx.moveTo(X(Lc.u[i]), Y(z - f)); else ctx.lineTo(X(Lc.u[i]), Y(z - f));
+        ab = true;
+      }
+      ctx.stroke();
+    };
+    if (LF && fant) {
+      ctx.strokeStyle = COR_FANTASMA;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash(TRACO_FANTASMA);
+      curva(LF, fant.sol.f);
       ctx.setLineDash([]);
     }
     // traçado exato
@@ -495,7 +605,7 @@ function Aberracao({ sessao }: PropsI) {
     } else if (ptr && ptr.x >= a.x && ptr.x <= a.x + a.w) {
       textoCurto(ctx, 'toque para escolher o raio', ptr.x + 8, a.y + 10, cores.texto2);
     }
-  }, [sol, tam.w, tam.h, ptr?.x]);
+  }, [sol, fant?.sol, tam.w, tam.h, ptr?.x]);
 
   const pr = sol.prova;
   return (
@@ -505,11 +615,13 @@ function Aberracao({ sessao }: PropsI) {
         <div class="legenda">
           <span><i style={`border-color:${cores.luz}`} />traçado exato</span>
           {noEixo && <span><i style={`border-color:${cores.teoria};border-top-style:dashed`} />3ª ordem</span>}
+          <LegendaFantasma f={fant} />
         </div>
         <div class="medidas">
           <Medida simbolo="f" nome="foco paraxial" valor={`${fmtFixo(sol.f, 2)}`} unidade="mm" />
           <Medida simbolo="\Delta z^{m}" nome="raio marginal" valor={sol.marginalSup.zCruz === null ? '—' : comprimentoMm(sol.marginalSup.zCruz - sol.f, 4)} destaque
             def="z× − f: negativo quando o raio cruza o eixo antes de F (mais perto do espelho)." />
+          {fant && <Medida simbolo="\Delta z^{m}" nome={`no estado ${fant.nome}`} valor={fant.sol.marginalSup.zCruz === null ? '—' : comprimentoMm(fant.sol.marginalSup.zCruz - fant.sol.f, 4)} />}
           {pr && <Medida simbolo="\Delta z" nome="raio de prova" valor={pr.zCruz === null ? 'não cruza' : comprimentoMm(pr.zCruz - sol.f, 4)} />}
         </div>
         {!pr && <div class="def" style="color:var(--texto-3);margin-top:6px">Toque ou arraste no gráfico para escolher o raio de prova.</div>}
@@ -522,6 +634,7 @@ function Aberracao({ sessao }: PropsI) {
 
 function Varredura({ sessao }: PropsI) {
   const sol = sessao.solucao.value;
+  const fant = useFantasma(sessao);
   const [ref, tam] = useTamanho<HTMLDivElement>();
   const canvas = useRef<HTMLCanvasElement>(null);
   const areaRef = useRef<{ a: Area; z0: number; z1: number } | null>(null);
@@ -536,10 +649,17 @@ function Varredura({ sessao }: PropsI) {
   });
   // faixa fixa pelos focos paraxial e marginal: não depende de onde o anteparo está
   const f = sol.f;
-  const zm = [sol.marginalSup.zCruz, sol.marginalInf.zCruz].filter((z): z is number => z !== null && Math.abs(z - f) < 0.6 * f);
-  const ext = Math.max(0.02 * f, ...zm.map((z) => Math.abs(z - f)));
-  const lo = Math.min(f, ...zm) - 0.55 * ext;
-  const hi = Math.max(f, ...zm) + 0.55 * ext;
+  // com um estado guardado, a faixa cobre também o foco e os cruzamentos marginais dele
+  const pontos: number[] = [];
+  for (const r of fant ? [sol, fant.sol] : [sol]) {
+    pontos.push(r.f);
+    for (const z of [r.marginalSup.zCruz, r.marginalInf.zCruz]) if (z !== null && Math.abs(z - r.f) < 0.6 * r.f) pontos.push(z);
+  }
+  const pMin = Math.min(...pontos);
+  const pMax = Math.max(...pontos);
+  const ext = Math.max(0.02 * f, pMax - f, f - pMin);
+  const lo = pMin - 0.55 * ext;
+  const hi = pMax + 0.55 * ext;
   const z0 = Math.max(0, lo);
   const z1 = hi;
   const N = 161;
@@ -551,8 +671,9 @@ function Varredura({ sessao }: PropsI) {
     const ctx = preparar(c, tam.w, tam.h);
     if (!ctx) return;
     const a = areaPadrao(tam.w, tam.h, 54, 16, 24, 38);
+    const VF = fant ? fant.sol.varredura(z0, z1, N) : null;
     let wMax = 0;
-    for (let i = 0; i < N; i++) if (V.W[i] > wMax) wMax = V.W[i];
+    for (let i = 0; i < N; i++) wMax = Math.max(wMax, V.W[i] || 0, VF ? VF.W[i] || 0 : 0);
     const { un, fator } = unidadePara(wMax || 1);
     // eixo z invertido para coincidir com a cena (espelho à direita)
     const ex = { min: z0, max: z1, titulo: 'posição do anteparo z (mm), crescendo para a esquerda como na cena', inverter: true };
@@ -575,6 +696,11 @@ function Varredura({ sessao }: PropsI) {
       }
       ctx.stroke();
     };
+    if (VF) {
+      ctx.setLineDash(TRACO_FANTASMA);
+      serie(VF.W, COR_FANTASMA);
+      ctx.setLineDash([]);
+    }
     serie(V.W, cores.serie1);
     serie(V.rms, cores.serie2);
     // rótulos diretos no fim das séries (lado do espelho)
@@ -625,7 +751,7 @@ function Varredura({ sessao }: PropsI) {
     } else {
       textoCurto(ctx, zs > z1 ? '◀ anteparo fora da faixa' : 'anteparo fora da faixa ▶', zs > z1 ? a.x + 6 : a.x + a.w - 6, a.y + 10, cores.texto2, zs > z1 ? 'left' : 'right');
     }
-  }, [sol, tam.w, tam.h, ptr?.x]);
+  }, [sol, fant?.sol, tam.w, tam.h, ptr?.x]);
 
   return (
     <>
@@ -634,6 +760,7 @@ function Varredura({ sessao }: PropsI) {
         <div class="legenda">
           <span><i style={`border-color:${cores.serie1}`} />W, largura total</span>
           <span><i style={`border-color:${cores.serie2}`} />σ, desvio RMS</span>
+          {fant && <span data-fantasma={fant.nome}><i style={`border-color:${COR_FANTASMA};border-top-style:dashed`} />W no estado {fant.nome}</span>}
         </div>
         <div class="medidas">
           <Medida simbolo="z_s" nome="anteparo" valor={fmtFixo(sol.cfg.zs, 2)} unidade="mm" />
