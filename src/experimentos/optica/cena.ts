@@ -1334,7 +1334,8 @@ export class CenaOptica {
       const y0 = H - 40;
       const comLuz = (v.luz as boolean) && this.luz.modo !== 'desligada' && W > 430;
       ctx.fillStyle = 'rgba(5,7,10,0.78)';
-      ctx.fillRect(0, y0 - 28, x0 + Math.max(96, px) + (comLuz ? 34 + 112 + 22 : 14), H - (y0 - 28));
+      // termina em H − 24: não cobre os rótulos da régua do eixo, desenhados em H − 17
+      ctx.fillRect(0, y0 - 28, x0 + Math.max(96, px) + (comLuz ? 34 + 112 + 22 : 14), 44);
       ctx.strokeStyle = cores.texto2;
       ctx.lineWidth = 1.2;
       ctx.beginPath();

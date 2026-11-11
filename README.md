@@ -15,7 +15,7 @@ Nos dois: predefinições de investigação, dois estados guardados (A/B) que al
 
 ## Rodar
 
-Requer Node 22.
+Requer Node 22. Numa máquina ou container novo, `bash scripts/ambiente.sh` faz tudo de uma vez (dependências, graphify, navegador dos testes).
 
 ```sh
 npm ci            # instala as versões fixadas em package-lock.json
@@ -65,11 +65,13 @@ src/experimentos/   um diretório por experimento:
     Vista.tsx         painel, instrumentos/gráficos, explicação
 tests/              verificação científica; tests/referencia/ tem valores independentes (mpmath)
 e2e/                testes de navegador
-scripts/            medir (terminal), desempenho, captura de telas, artefato
-docs/               guia de novo experimento, verificação, desempenho
+scripts/            ambiente (preparar máquina), medir (terminal), desempenho, captura de telas, artefato
+docs/               método e pesquisa, guia de novo experimento, verificação, desempenho
+.claude/skills/     skill do projeto para o Claude Code
 graphify-out/       mapa do código gerado pelo graphify (GRAPH_REPORT.md)
 ```
 
+- **Para continuar o projeto (pessoa ou agente):** [CLAUDE.md](CLAUDE.md) tem as regras e convenções; [docs/metodo-e-pesquisa.md](docs/metodo-e-pesquisa.md) registra o ambiente, as ferramentas e skills usadas, o método, os achados de física e numérica e as armadilhas. A skill do projeto (`.claude/skills/estudio-de-simulacoes`) carrega sozinha no Claude Code.
 - **Acrescentar um experimento:** [docs/novo-experimento.md](docs/novo-experimento.md)
 - **O que foi verificado, com que tolerância, e o que foi emulação:** [docs/verificacao.md](docs/verificacao.md)
 - **Desempenho medido:** [docs/desempenho.md](docs/desempenho.md)
@@ -86,4 +88,4 @@ graphify explain "Sessao"        # um nó e seus vizinhos
 graphify affected "tracarBruto"  # o que depende de uma função
 ```
 
-Só o relatório é versionado; `graph.json` e `graph.html` são regenerados localmente. Para o Claude Code consultar o grafo sozinho em sessões futuras, rode `graphify claude install` na raiz do projeto.
+Só o relatório é versionado; `graph.json` e `graph.html` são regenerados localmente. O `CLAUDE.md` do projeto já instrui o Claude Code a ler o relatório antes de abrir arquivos grandes. Medido aqui: 712 nós, 29,6× menos tokens por consulta do que ler o código inteiro.

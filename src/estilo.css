@@ -613,6 +613,23 @@ select.selecao {
 .so-largo { display: inline; }
 @media (max-width: 1020px) { .so-largo { display: none; } }
 @media (max-width: 700px) { .barra .marca span { display: none; } .barra .marca { margin-right: 2px; } }
+.abas-exp .t-curto { display: none; }
+@media (max-width: 760px) {
+  .abas-exp .t-longo { display: none; }
+  .abas-exp .t-curto { display: inline; }
+  .abas-exp button { padding: 0 9px; }
+}
+@media (max-width: 560px) {
+  .barra { gap: 2px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+  .barra .sep, .so-medio { display: none; }
+  .guardado { width: 30px; }
+  .cena .legenda-cena { display: none; }
+}
+@media (max-width: 430px) {
+  .barra .marca { display: none; }
+  .barra .btn { min-width: 30px; padding: 0 5px; }
+  .abas-exp button { padding: 0 7px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

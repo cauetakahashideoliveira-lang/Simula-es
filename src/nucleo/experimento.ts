@@ -38,6 +38,8 @@ export interface DefExperimento<Sol = unknown> {
   /** versão do esquema de parâmetros; aumenta quando um link antigo precisa de migração */
   versao: number;
   titulo: string;
+  /** título para telas estreitas (abas da barra superior) */
+  tituloCurto?: string;
   resumo: string;
   parametros: readonly EspecParam[];
   extrasPadrao: Extras;

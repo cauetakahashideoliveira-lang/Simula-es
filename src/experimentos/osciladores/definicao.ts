@@ -169,6 +169,7 @@ export const osciladores: DefExperimento<SolucaoOsc> = {
   id: 'osciladores',
   versao: 1,
   titulo: 'Osciladores acoplados',
+  tituloCurto: 'Osciladores',
   resumo: 'Batimentos, modos normais e conservação de energia em duas massas ligadas por molas.',
   parametros,
   extrasPadrao,

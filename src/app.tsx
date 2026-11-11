@@ -187,14 +187,15 @@ function Barra({ s }: { s: Sessao<any> }) {
       <Marca />
       <nav class="abas-exp" role="tablist" aria-label="Experimentos">
         {ordem.map((id) => (
-          <button role="tab" aria-selected={ativo.value === id} onClick={() => {
+          <button role="tab" aria-label={definicoes[id].titulo} aria-selected={ativo.value === id} onClick={() => {
             const novo = !sessoes.has(id);
             ativo.value = id;
             // primeira visita ao experimento nesta sessão: mostra por onde começar
             if (novo) mostrarConvite(sessaoDe(id), definicoes[id].predefinicoes[0]?.id);
             else convite.value = null;
           }}>
-            {definicoes[id].titulo}
+            <span class="t-longo">{definicoes[id].titulo}</span>
+            <span class="t-curto">{definicoes[id].tituloCurto ?? definicoes[id].titulo}</span>
           </button>
         ))}
       </nav>
@@ -206,7 +207,7 @@ function Barra({ s }: { s: Sessao<any> }) {
       <Guardados s={s} />
       <div class="sep" />
       <button class="btn" disabled={!s.podeDesfazer.value} onClick={() => s.desfazer()} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><Icone.desfazer /></button>
-      <button class="btn" disabled={!s.podeRefazer.value} onClick={() => s.refazer()} title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer"><Icone.refazer /></button>
+      <button class="btn so-medio" disabled={!s.podeRefazer.value} onClick={() => s.refazer()} title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer"><Icone.refazer /></button>
       <button class="btn" onClick={() => { s.restaurar(); mostrarConvite(s, s.def.predefinicoes[0]?.id); }} title="Restaurar o estado inicial" aria-label="Restaurar o estado inicial"><Icone.restaurar /></button>
       <div class="sep" />
       <button ref={refComp} class={`btn contorno${menu === 'comp' ? ' ativo' : ''}`} onClick={() => setMenu(menu === 'comp' ? null : 'comp')} aria-haspopup="menu">

@@ -212,6 +212,7 @@ export const optica: DefExperimento<Solucao> = {
   id: 'optica',
   versao: 1,
   titulo: 'Bancada de óptica',
+  tituloCurto: 'Óptica',
   resumo: 'Focalização e aberração esférica em espelhos côncavos.',
   parametros,
   extrasPadrao,
