@@ -135,6 +135,7 @@ Só `graphify-out/GRAPH_REPORT.md` é versionado (`.gitignore`); `graph.json` e 
 | Embutido como Artifact, o endereço só aceita `#nome` e downloads diretos são bloqueados | `src/config.ts` detecta o visualizador; link de estado usa o endereço público; arquivos saem pela capacidade `downloads`. |
 | O service worker não achava os módulos guardados ao recarregar sem rede | O Vite pede módulos com `crossorigin` e o servidor responde `Vary: Origin`; `cache.match` precisa de `ignoreVary: true`. |
 | Teste que esperava 500 ms pelo link falhou com os testes em paralelo | Esperar a condição (`expect.poll` até o endereço igualar `sessao.link()`), nunca um tempo fixo. |
+| Na CI, `playwright install --with-deps` falhou três vezes seguidas: o runner não resolvia o DNS dos espelhos do Ubuntu | Se a instalação com dependências falhar, instalar só o navegador (vem do CDN do Playwright). A imagem do runner já tem as bibliotecas do Chrome e o estúdio traz as próprias fontes. |
 | Reinício do processo do agente no meio do trabalho | Commits pequenos e frequentes; checar `git status` ao voltar. |
 
 ## 9. Como retomar numa sessão nova
