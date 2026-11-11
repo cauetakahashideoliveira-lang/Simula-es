@@ -17,8 +17,8 @@ jobs:
     name: Núcleo científico e build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -36,13 +36,20 @@ jobs:
     name: Testes de navegador (Chromium, viewport de tablet)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # os espelhos do Ubuntu falham de vez em quando (DNS): até três tentativas
+      - name: Instalar o Chromium do Playwright
+        run: |
+          for i in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "tentativa $i falhou; nova tentativa em 30 s"; sleep 30
+          done
+          exit 1
       - run: npm run test:e2e
 
   publicar:
@@ -56,8 +63,8 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
